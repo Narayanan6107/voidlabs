@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera Movement with WASD and 3D Button</title>
+  <title>Camera Movement with WASD and Mouse Turning</title>
   <style>
     body { margin: 0; }
     canvas { display: block; }
@@ -26,101 +26,77 @@
     const floorGeometry = new THREE.PlaneGeometry(100, 100);
     const floorMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
     const floor = new THREE.Mesh(floorGeometry, floorMaterial);
-    floor.rotation.x = -Math.PI / 2; // Rotate to make it horizontal
-    floor.position.y = -1; // Slightly below the center to avoid clipping with camera
+    floor.rotation.x = -Math.PI / 2;
+    floor.position.y = -1;
     scene.add(floor);
 
-    // Create some shapes (sphere, cylinder, cone)
-    const sphereGeometry = new THREE.SphereGeometry(1, 32, 32);
-    const sphereMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-    const sphere = new THREE.Mesh(sphereGeometry, sphereMaterial);
+    // Create some shapes
+    const sphere = new THREE.Mesh(new THREE.SphereGeometry(1, 32, 32), new THREE.MeshBasicMaterial({ color: 0xff0000 }));
     sphere.position.set(-3, 1, 0);
     scene.add(sphere);
 
-    const cylinderGeometry = new THREE.CylinderGeometry(1, 1, 2, 32);
-    const cylinderMaterial = new THREE.MeshBasicMaterial({ color: 0x00ff00 });
-    const cylinder = new THREE.Mesh(cylinderGeometry, cylinderMaterial);
+    const cylinder = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 2, 32), new THREE.MeshBasicMaterial({ color: 0x00ff00 }));
     cylinder.position.set(0, 1, 0);
     scene.add(cylinder);
 
-    const coneGeometry = new THREE.ConeGeometry(1, 2, 32);
-    const coneMaterial = new THREE.MeshBasicMaterial({ color: 0x0000ff });
-    const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+    const cone = new THREE.Mesh(new THREE.ConeGeometry(1, 2, 32), new THREE.MeshBasicMaterial({ color: 0x0000ff }));
     cone.position.set(3, 1, 0);
     scene.add(cone);
 
-    // Create 3D button (a smaller box)
-    const buttonGeometry = new THREE.BoxGeometry(1, 0.5, 0.2);  // Smaller size
-    const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0x4CAF50 });
-    const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
-    button.position.set(0, 1, -5); // Position the button in front of the camera
+    // Create 3D button
+    const button = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 0.2), new THREE.MeshBasicMaterial({ color: 0x4CAF50 }));
+    button.position.set(0, 1, -5);
     scene.add(button);
 
     // Camera position
     camera.position.set(0, 1, 5);
-
-    // Reduced camera movement speed
     const speed = 0.05;
+    const keys = { w: false, a: false, s: false, d: false };
+    let isMouseDown = false;
+    let previousMouseX = 0;
+    const rotationSpeed = 0.005;
 
     // Keyboard movement input
-    const keys = {
-      w: false,
-      a: false,
-      s: false,
-      d: false
-    };
+    window.addEventListener('keydown', (event) => { keys[event.key] = true; });
+    window.addEventListener('keyup', (event) => { keys[event.key] = false; });
 
-    // Listen for key presses
-    window.addEventListener('keydown', (event) => {
-      if (event.key === 'w') keys.w = true;
-      if (event.key === 'a') keys.a = true;
-      if (event.key === 's') keys.s = true;
-      if (event.key === 'd') keys.d = true;
-    });
-
-    window.addEventListener('keyup', (event) => {
-      if (event.key === 'w') keys.w = false;
-      if (event.key === 'a') keys.a = false;
-      if (event.key === 's') keys.s = false;
-      if (event.key === 'd') keys.d = false;
+    // Mouse movement tracking
+    window.addEventListener('mousedown', (event) => { isMouseDown = true; previousMouseX = event.clientX; });
+    window.addEventListener('mouseup', () => { isMouseDown = false; });
+    window.addEventListener('mousemove', (event) => {
+      if (isMouseDown) {
+        camera.rotation.y -= (event.clientX - previousMouseX) * rotationSpeed;
+        previousMouseX = event.clientX;
+      }
     });
 
     // Raycasting for button interaction
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-
-    window.addEventListener('click', onClick, false);
-
-    // Function to convert mouse click to normalized device coordinates (-1 to +1)
-    function onClick(event) {
+    window.addEventListener('click', (event) => {
       mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
       mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      checkButtonClick();
-    }
-
-    // Function to check if the button is clicked
-    function checkButtonClick() {
       raycaster.setFromCamera(mouse, camera);
-      const intersects = raycaster.intersectObject(button);
-
-      if (intersects.length > 0) {
-        window.location.href = "congrats.html"; // Redirect to congrats page on click
+      if (raycaster.intersectObject(button).length > 0) {
+        window.location.href = "congrats.html";
       }
-    }
+    });
 
     // Animation loop
     function animate() {
       requestAnimationFrame(animate);
-
-      // Move the camera based on key input
-      if (keys.w) camera.position.z -= speed; // Move forward
-      if (keys.s) camera.position.z += speed; // Move backward
-      if (keys.a) camera.position.x -= speed; // Move left
-      if (keys.d) camera.position.x += speed; // Move right
-
+      
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+      
+      if (keys.w) camera.position.addScaledVector(direction, speed);
+      if (keys.s) camera.position.addScaledVector(direction, -speed);
+      if (keys.a) camera.position.addScaledVector(right, -speed);
+      if (keys.d) camera.position.addScaledVector(right, speed);
+      
       renderer.render(scene, camera);
     }
-
     animate();
   </script>
 </body>
