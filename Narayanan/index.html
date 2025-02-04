@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Camera Movement with WASD and 3D Button</title>
+  <title>Camera Movement with WASD and Mouse Turning</title>
   <style>
     body { margin: 0; }
     canvas { display: block; }
@@ -70,6 +70,11 @@
       d: false
     };
 
+    // Mouse movement tracking
+    let isMouseDown = false;
+    let previousMouseX = 0;
+    const rotationSpeed = 0.005;
+
     // Listen for key presses
     window.addEventListener('keydown', (event) => {
       if (event.key === 'w') keys.w = true;
@@ -83,6 +88,24 @@
       if (event.key === 'a') keys.a = false;
       if (event.key === 's') keys.s = false;
       if (event.key === 'd') keys.d = false;
+    });
+
+    // Mouse event listeners
+    window.addEventListener('mousedown', (event) => {
+      isMouseDown = true;
+      previousMouseX = event.clientX;
+    });
+
+    window.addEventListener('mouseup', () => {
+      isMouseDown = false;
+    });
+
+    window.addEventListener('mousemove', (event) => {
+      if (isMouseDown) {
+        const deltaX = event.clientX - previousMouseX;
+        camera.rotation.y -= deltaX * rotationSpeed;
+        previousMouseX = event.clientX;
+      }
     });
 
     // Raycasting for button interaction
