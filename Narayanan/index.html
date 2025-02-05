@@ -50,23 +50,44 @@
     cone.position.set(3, 1, 0);
     scene.add(cone);
 
-    // Create 3D button
-    const button = new THREE.Mesh(new THREE.BoxGeometry(1, 0.5, 0.2), new THREE.MeshBasicMaterial({ color: 0x4CAF50 }));
-    button.position.set(0, 1, -5);
-    scene.add(button);
+    // Pickable object
+    const pickableObject = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({ color: 0xffff00 }));
+    pickableObject.position.set(0, 1, -3);
+    scene.add(pickableObject);
 
-    // Raycasting for button interaction
+    // Raycasting for picking
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
-    window.addEventListener('click', (event) => {
-      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-      raycaster.setFromCamera(mouse, camera);
-      if (raycaster.intersectObject(button).length > 0) {
-        window.location.href = "congrats.html";
+    let isHoldingObject = false;
+    let heldObject = null;
+
+    window.addEventListener('keydown', (event) => {
+      if (event.key.toLowerCase() === 'e') {
+        if (!isHoldingObject) {
+          // Raycast from the camera to check for the pickable object
+          raycaster.set(camera.position, new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion));
+          const intersects = raycaster.intersectObject(pickableObject);
+          if (intersects.length > 0) {
+            isHoldingObject = true;
+            heldObject = pickableObject;
+            scene.remove(pickableObject); // Remove from the scene and attach to the camera
+            camera.add(heldObject);
+            heldObject.position.set(0, 0, -2); // Set the position relative to the camera
+          }
+        } else {
+          // Drop the object
+          isHoldingObject = false;
+          camera.remove(heldObject);
+          heldObject.position.set(
+            camera.position.x + camera.getWorldDirection(new THREE.Vector3()).x * 2,
+            camera.position.y,
+            camera.position.z + camera.getWorldDirection(new THREE.Vector3()).z * 2
+          );
+          scene.add(heldObject);
+          heldObject = null;
+        }
       }
     });
-
 
     // Camera position
     camera.position.set(0, 1, 5);
@@ -98,6 +119,7 @@
         previousMouseX = event.clientX;
       }
     });
+
     // Animation loop
     function animate() {
       requestAnimationFrame(animate);
@@ -125,7 +147,6 @@
       
       renderer.render(scene, camera);
     }
-    //HELLLLOOOOOOOO
     animate();
   </script>
 </body>
