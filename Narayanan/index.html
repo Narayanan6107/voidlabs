@@ -11,6 +11,7 @@
 </head>
 <body>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 
   <script>
     const scene = new THREE.Scene();
@@ -70,10 +71,21 @@
 
     const ceilingMaterial = new THREE.MeshStandardMaterial({ map: ceilingTexture });
 
-    const ceilingGeometry = new THREE.BoxGeometry(40, 2, 20);
+    const ceilingGeometry = new THREE.BoxGeometry(20, 2, 40);
     const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
     ceiling.position.set(0, 9, 0); 
     scene.add(ceiling); 
+
+     // Load GLTF Model
+     const loader = new THREE.GLTFLoader();
+    loader.load('lift.gltf', function(gltf) {
+      gltf.scene.position.set(-5, -1, -25.1);
+      gltf.scene.scale.set(2, 2, 2); 
+      gltf.scene.rotation.y = Math.PI;
+      scene.add(gltf.scene);
+    }, undefined, function(error) {
+      console.error('Error loading GLTF model:', error);
+    });
 
     //3D button
     const buttonGeometry = new THREE.BoxGeometry(0.6, 0.3, 0.1); // Adjust size
@@ -81,6 +93,10 @@
     const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
     button.position.set(2.5, 1, -19);
     scene.add(button);
+
+    const pointLight = new THREE.PointLight(0xffffff, 3, 50);
+    pointLight.position.set(0, 5, 0);
+    scene.add(pointLight);
 
     const raycaster = new THREE.Raycaster();
     const mouse = new THREE.Vector2();
@@ -151,7 +167,6 @@
       
       renderer.render(scene, camera);
     }
-    #comment
     animate();
   </script>
 </body>
