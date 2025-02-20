@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VOIDLABS.inc</title>
+  <style>
+    body { margin: 0; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+
+  <script>
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    document.body.appendChild(renderer.domElement);
+
+    scene.background = new THREE.Color(0x000000);
+
+    const textureLoader = new THREE.TextureLoader();
+    const floorTexture = textureLoader.load('floor_texture.jpg'); 
+    floorTexture.wrapS = THREE.RepeatWrapping;
+    floorTexture.wrapT = THREE.RepeatWrapping;
+    floorTexture.repeat.set(5, 5); 
+
+    const floorGeometry = new THREE.BoxGeometry(20, 2, 40);
+    const floorMaterial = new THREE.MeshBasicMaterial({ map: floorTexture });
+    const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+    floor.position.y = -2;
+    scene.add(floor);
+
+    const wallTexture = new THREE.TextureLoader().load('wall_texture.jpg'); 
+    wallTexture.wrapS = THREE.RepeatWrapping;
+    wallTexture.wrapT = THREE.RepeatWrapping;
+    wallTexture.anisotropy = 16; 
+    wallTexture.repeat.set(1, 1); 
+
+    const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
+
+    // Left Wall
+    const leftWall = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 40), wallMaterial);
+    leftWall.position.set(-10, 3, 0);
+    scene.add(leftWall);
+
+    // Right Wall
+    const rightWall = new THREE.Mesh(new THREE.BoxGeometry(2, 10, 40), wallMaterial);
+    rightWall.position.set(10, 3, 0);
+    scene.add(rightWall);
+
+    // Front Wall
+    const frontWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 2), wallMaterial);
+    frontWall.position.set(0, 3, -20);
+    scene.add(frontWall);
+
+    // Back Wall
+    const backWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 2), wallMaterial);
+    backWall.position.set(0, 3, 20);
+    scene.add(backWall);
+
+
+    const ceilingTexture = new THREE.TextureLoader().load('clng.jpg'); 
+    ceilingTexture.wrapS = THREE.RepeatWrapping;
+    ceilingTexture.wrapT = THREE.RepeatWrapping;
+    ceilingTexture.anisotropy = 16; 
+    ceilingTexture.repeat.set(1, 1); 
+
+    const ceilingMaterial = new THREE.MeshStandardMaterial({ map: ceilingTexture });
+
+    const ceilingGeometry = new THREE.BoxGeometry(20, 2, 40);
+    const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
+    ceiling.position.set(0, 9, 0); 
+    scene.add(ceiling); 
+
+
+    const pointLight = new THREE.PointLight(0xffffff, 3, 50);
+    pointLight.position.set(0, 5, 0);
+    scene.add(pointLight);
+
+    // Camera posi
+    camera.position.set(0, 1, 5);
+    const speed = 0.05;
+    const jumpSpeed = 0.2;
+    let velocityY = 0;
+    let isJumping = false;
+    const keys = { w: false, a: false, s: false, d: false, space: false };
+    let isMouseDown = false;
+    let previousMouseX = 0;
+    const rotationSpeed = 0.005;
+
+    // Keyboard 
+    window.addEventListener('keydown', (event) => {
+      if (event.code === 'Space' && !isJumping) {
+        velocityY = jumpSpeed;
+        isJumping = true;
+      }
+      keys[event.key.toLowerCase()] = true;
+    });
+    window.addEventListener('keyup', (event) => { keys[event.key.toLowerCase()] = false; });
+
+    // Mouse 
+    window.addEventListener('mousedown', (event) => { isMouseDown = true; previousMouseX = event.clientX; });
+    window.addEventListener('mouseup', () => { isMouseDown = false; });
+    window.addEventListener('mousemove', (event) => {
+      if (isMouseDown) {
+        camera.rotation.y -= (event.clientX - previousMouseX) * rotationSpeed;
+        previousMouseX = event.clientX;
+      }
+    });
+
+    function animate() {
+      requestAnimationFrame(animate);
+      
+      const direction = new THREE.Vector3();
+      camera.getWorldDirection(direction);
+      const right = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 1, 0)).normalize();
+      
+      if (keys.w) camera.position.addScaledVector(direction, speed);
+      if (keys.s) camera.position.addScaledVector(direction, -speed);
+      if (keys.a) camera.position.addScaledVector(right, -speed);
+      if (keys.d) camera.position.addScaledVector(right, speed);
+      
+      // Jump
+      camera.position.y += velocityY;
+      if (isJumping) velocityY -= 0.004;
+      if (camera.position.y <= 1) { 
+        camera.position.y = 1;
+        isJumping = false;
+      }
+      
+      //boundaries 
+      camera.position.x = Math.max(-8, Math.min(8, camera.position.x));  
+      camera.position.z = Math.max(-18, Math.min(18, camera.position.z)); 
+
+      
+      renderer.render(scene, camera);
+    }
+    animate();
+  </script>
+</body>
+</html>
