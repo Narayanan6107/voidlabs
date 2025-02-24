@@ -20,6 +20,25 @@
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
+    document.addEventListener('keydown', (event) => {
+  if (event.key === 'F11') {
+    event.preventDefault();
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }
+});
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+window.addEventListener('resize', onWindowResize);
+
     scene.background = new THREE.Color(0x000000);
 
     const textureLoader = new THREE.TextureLoader();
@@ -34,11 +53,11 @@
     floor.position.y = -2;
     scene.add(floor);
 
-    const wallTexture = new THREE.TextureLoader().load('wall_texture.jpg'); 
+    const wallTexture = new THREE.TextureLoader().load('wall_texture1.jpg'); 
     wallTexture.wrapS = THREE.RepeatWrapping;
     wallTexture.wrapT = THREE.RepeatWrapping;
     wallTexture.anisotropy = 16; 
-    wallTexture.repeat.set(1, 1); 
+    wallTexture.repeat.set(4, 4); // Increase repeat values to tile the texture
 
     const wallMaterial = new THREE.MeshBasicMaterial({ map: wallTexture });
 
@@ -61,42 +80,79 @@
     const backWall = new THREE.Mesh(new THREE.BoxGeometry(20, 10, 2), wallMaterial);
     backWall.position.set(0, 3, 15);
     scene.add(backWall);
+// Outer Ceiling - Pure White
+const outerColor = new THREE.MeshStandardMaterial({ 
+    color: 0xffffff, // Pure white 
+    roughness: 0.3,
+    emissive: 0xffffff,  // White emission to keep it bright
+    emissiveIntensity: 1.0 
+}); 
 
+// Inner Ceiling - Dark Gray with Glow Effect
+const innerColor = new THREE.MeshStandardMaterial({ 
+    color: 0x222222, 
+    roughness: 0.5,
+    emissive: 0x444444,  // Slight glow effect
+    emissiveIntensity: 1.0
+}); 
 
-    const ceilingTexture = new THREE.TextureLoader().load('clng.jpg'); 
-    ceilingTexture.wrapS = THREE.RepeatWrapping;
-    ceilingTexture.wrapT = THREE.RepeatWrapping;
-    ceilingTexture.anisotropy = 16; 
-    ceilingTexture.repeat.set(1, 1); 
+// Outer Ceiling
+const outerGeometry = new THREE.BoxGeometry(20, 0.2, 40);
+const outerCeiling = new THREE.Mesh(outerGeometry, outerColor);
+outerCeiling.position.set(0, 8, 0);
+scene.add(outerCeiling); 
 
-    const ceilingMaterial = new THREE.MeshStandardMaterial({ map: ceilingTexture });
+// Inner Ceiling - Split into 4 parts (forming a hole)
+const p1 = new THREE.BoxGeometry(18, 0.2, 10); // Top part
+const p2 = new THREE.BoxGeometry(18, 0.2, 10); // Bottom part
+const p3 = new THREE.BoxGeometry(5, 0.2, 20);  // Left part
+const p4 = new THREE.BoxGeometry(5, 0.2, 20);  // Right part
 
-    const ceilingGeometry = new THREE.BoxGeometry(20, 2, 40);
-    const ceiling = new THREE.Mesh(ceilingGeometry, ceilingMaterial);
-    ceiling.position.set(0, 9, 0); 
-    scene.add(ceiling); 
+const part1 = new THREE.Mesh(p1, innerColor);
+const part2 = new THREE.Mesh(p2, innerColor);
+const part3 = new THREE.Mesh(p3, innerColor);
+const part4 = new THREE.Mesh(p4, innerColor);
 
-     // Load GLTF Model
-     const loader = new THREE.GLTFLoader();
+part1.position.set(0, 7.5, 12);  // Top part
+part2.position.set(0, 7.5, -12); // Bottom part
+part3.position.set(-6, 7.5, 0);  // Left part
+part4.position.set(6, 7.5, 0);   // Right part
+
+scene.add(part1);
+scene.add(part2);
+scene.add(part3);
+scene.add(part4);
+
+    // Load GLTF Model
+    const loader = new THREE.GLTFLoader();
     loader.load('lift.gltf', function(gltf) {
-      gltf.scene.position.set(-7, -1, -21.5);
-      gltf.scene.scale.set(2.5, 2.5, 2.5); 
+      gltf.scene.position.set(-7, -1, -21);
+      gltf.scene.scale.set(2.5, 2.5, 2.5);
       gltf.scene.rotation.y = Math.PI;
+
+      // Ensure model reacts to light
+      gltf.scene.traverse((child) => {
+        if (child.isMesh) {
+          child.material = new THREE.MeshStandardMaterial({
+            color: child.material.color,  
+            roughness: 0.4
+          });
+          child.castShadow = true;
+          child.receiveShadow = true;
+        }
+      });
+
       scene.add(gltf.scene);
     }, undefined, function(error) {
       console.error('Error loading GLTF model:', error);
     });
 
     //3D button
-    const buttonGeometry = new THREE.BoxGeometry(1, 0.3, 0.1); // Adjust size
+    const buttonGeometry = new THREE.BoxGeometry(1, 0.3, 0.1); 
     const buttonMaterial = new THREE.MeshBasicMaterial({ color: 0x4CAF50 });
     const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
     button.position.set(2.5, 1, -19);
     scene.add(button);
-
-    const pointLight = new THREE.PointLight(0xffffff, 3, 50);
-    pointLight.position.set(0, 5, 0);
-    scene.add(pointLight);
 
     function updateMaterials(model) {
     model.traverse((child) => {
@@ -105,7 +161,6 @@
             const newMaterial = new THREE.MeshStandardMaterial({
                 map: oldMaterial.map,
                 color: oldMaterial.color,
-                // Copy other relevant properties if needed
             });
             child.material = newMaterial;
             child.material.needsUpdate = true;
@@ -123,7 +178,7 @@
       }
     });
 
-    // Camera posi
+    // Camera position
     camera.position.set(0, 1, 5);
     const speed = 0.05;
     const jumpSpeed = 0.2;
@@ -133,6 +188,7 @@
     let isMouseDown = false;
     let previousMouseX = 0;
     const rotationSpeed = 0.005;
+
 
     // Keyboard 
     window.addEventListener('keydown', (event) => {
@@ -153,7 +209,7 @@
         previousMouseX = event.clientX;
       }
     });
-
+    
     function animate() {
       requestAnimationFrame(animate);
       
